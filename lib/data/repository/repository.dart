@@ -1,33 +1,15 @@
-import 'package:sqflite_takrorlash/data/local/coffee_dao.dart';
-import 'package:sqflite_takrorlash/data/model/coffee_model.dart';
-import 'package:sqflite_takrorlash/utils/coffee_list.dart';
+import 'package:sqflite_takrorlash/data/model/favourite_currencies_model.dart';
 
-class Repository {
-  static Future<void> initData() async {
-    final List<CoffeeModel> allCoffees = await CoffeeDao.getAllCoffees();
-    try {
-      if (allCoffees.isEmpty) {
-        for (CoffeeModel element in CoffeeUtils.coffeeModelList) {
-          await CoffeeDao.insertCoffee(element);
-        }
-      }
-    } catch (_) {
-      rethrow;
-    }
-  }
+abstract class Repository {
+  Future<void> syncCurrencies();
 
-  static Future<void> increaseCoffee(CoffeeModel model) =>
-      CoffeeDao.updateCount(model.id!, (model.count! >= 0) ? model.count! + 1 : model.count!);
+  Future<List<FavouriteCurrencyModel>> getAllCurrenciesFromApi();
 
-  static Future<void> decreaseCoffee(CoffeeModel model) =>
-      CoffeeDao.updateCount(model.id!, (model.count! == 0) ? model.count! : model.count! - 1);
+  Future<void> saveToFavourites(FavouriteCurrencyModel model);
 
-  static Future<List<CoffeeModel>> getAllCoffees() => CoffeeDao.getAllCoffees();
+  Future<List<FavouriteCurrencyModel>> getAllFavourites();
 
-  static Future<void> saveToFavourite(CoffeeModel model) async =>
-      CoffeeDao.updateIsFavourite(model.id!, model.isFavourite);
+  Future<void> deleteOneCurrencies(int id);
 
-  static Future<List<CoffeeModel>> getAllFavouriteCoffees() => CoffeeDao.getAllFavourites();
-
-  static Future<int> deleteFavouriteCoffee(int id) => CoffeeDao.deleteFromFavourites(id);
+  Future<void> clearAllCurrencies();
 }

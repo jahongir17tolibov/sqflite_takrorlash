@@ -1,7 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:sqflite_takrorlash/data/model/coffee_model.dart';
+import 'package:sqflite_takrorlash/data/model/favourite_currencies_model.dart';
 import 'package:sqflite_takrorlash/data/repository/repository.dart';
+import 'package:sqflite_takrorlash/data/repository/repository_impl.dart';
 
 class FavouritesScreen extends StatefulWidget {
   const FavouritesScreen({super.key});
@@ -11,6 +12,8 @@ class FavouritesScreen extends StatefulWidget {
 }
 
 class _FavouritesScreenState extends State<FavouritesScreen> {
+  final Repository repository = RepositoryImpl();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -25,31 +28,36 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
         ),
       ),
       body: FutureBuilder(
-        future: Repository.getAllFavouriteCoffees(),
+        future: repository.getAllFavourites(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(child: Text(snapshot.error.toString()));
           }
 
           if (snapshot.hasData) {
-            final List<CoffeeModel>? coffeeModel = snapshot.data;
+            final List<FavouriteCurrencyModel>? currencyModel = snapshot.data;
+
+            if (currencyModel!.isEmpty) {
+              return const Center(child: Text('Data is empty'));
+            }
+
             return ListView.builder(
-              itemCount: coffeeModel!.length,
+              itemCount: currencyModel.length,
               itemBuilder: (context, index) {
-                final coffee = coffeeModel[index];
+                final coffee = currencyModel[index];
                 return ListTile(
                   title: Text(
-                    coffee.name!,
+                    coffee.ccyName,
                     style: const TextStyle(color: Colors.black, fontSize: 20),
                   ),
                   subtitle: Text(
-                    coffee.price.toString(),
+                    coffee.code.toString(),
                     style: const TextStyle(color: Colors.black54, fontSize: 20),
                   ),
                   trailing: IconButton(
                     onPressed: () async {
                       final model = coffee.copyWith(isFavourite: 0);
-                      await Repository.saveToFavourite(model);
+                      await repository.saveToFavourites(model);
                       setState(() {});
                     },
                     icon: const Icon(

@@ -2,8 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:sqflite_takrorlash/data/model/coffee_model.dart';
+import 'package:flutter/services.dart';
+import 'package:sqflite_takrorlash/data/model/currency_model.dart';
+import 'package:sqflite_takrorlash/data/model/favourite_currencies_model.dart';
 import 'package:sqflite_takrorlash/data/repository/repository.dart';
+import 'package:sqflite_takrorlash/data/repository/repository_impl.dart';
 import 'package:sqflite_takrorlash/presentation/favourites_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -14,12 +17,13 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // List<CoffeeModel> coffeeModel = [];
+  final Repository repository = RepositoryImpl();
+  final List<CurrencyModel> currencyList = [];
+  static const String _invokeMethod = 'invoke_currency_map';
+  final MethodChannel _methodChannel = const MethodChannel('currencies_native');
 
   FutureOr<void> _init() async {
-    await Repository.initData();
-    setState(() {});
-    // coffeeModel = await Repository.getAllCoffees();
+    await repository.syncCurrencies();
   }
 
   @override
@@ -37,72 +41,54 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: <Widget>[
           IconButton(
             onPressed: () async {
-              Navigator.of(context)
+              await Navigator.of(context)
                   .push(CupertinoPageRoute(builder: (_) => const FavouritesScreen()))
                   .then((value) => setState(() {}));
             },
-            icon: const Icon(Icons.favorite_outline),
+            icon: const Icon(Icons.favorite_rounded),
           ),
-          const SizedBox(width: 50),
+          const SizedBox(width: 20),
+          const Icon(Icons.ac_unit_outlined)
         ],
       ),
       body: FutureBuilder(
-        future: Repository.getAllCoffees(),
+        future: repository.getAllCurrenciesFromApi(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(child: Text(snapshot.error.toString()));
           }
 
           if (snapshot.hasData) {
-            final List<CoffeeModel>? coffeeModel = snapshot.data;
+            final List<FavouriteCurrencyModel>? currencyModel = snapshot.data;
+
+            if (currencyModel!.isEmpty) {
+              return const Center(child: Text('Data is empty'));
+            }
+
             return ListView.builder(
-              itemCount: coffeeModel!.length,
+              itemCount: currencyModel.length,
               itemBuilder: (context, index) {
-                final coffee = coffeeModel[index];
+                final currency = currencyModel[index];
                 return ListTile(
                   title: Text(
-                    coffee.name,
+                    currency.ccyNameUz,
                     style: const TextStyle(color: Colors.black, fontSize: 20),
                   ),
                   subtitle: Text(
-                    coffee.price.toString(),
+                    currency.rate,
                     style: const TextStyle(color: Colors.black54, fontSize: 20),
                   ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: <Widget>[
-                      IconButton(
-                        onPressed: () async {
-                          await Repository.decreaseCoffee(coffee);
-                          setState(() {});
-                        },
-                        icon: const Icon(Icons.remove),
-                      ),
-                      Text(
-                        coffee.count.toString(),
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                      IconButton(
-                        onPressed: () async {
-                          await Repository.increaseCoffee(coffee);
-                          setState(() {});
-                        },
-                        icon: const Icon(Icons.add),
-                      ),
-                      IconButton(
-                        onPressed: () async {
-                          final coffeeModelUpdated =
-                              coffee.copyWith(isFavourite: (coffee.isFavourite == 0) ? 1 : 0);
-                          await Repository.saveToFavourite(coffeeModelUpdated);
-                          setState(() {});
-                        },
-                        icon: Icon(
-                          (coffee.isFavourite == 0) ? Icons.favorite_outline : Icons.favorite,
-                          color: Colors.red,
-                        ),
-                      )
-                    ],
+                  trailing: IconButton(
+                    onPressed: () async {
+                      final model =
+                          currency.copyWith(isFavourite: (currency.isFavourite == 0) ? 1 : 0);
+                      await repository.saveToFavourites(model);
+                      setState(() {});
+                    },
+                    icon: Icon(
+                      (currency.isFavourite == 0) ? Icons.favorite_outline : Icons.favorite,
+                      color: Colors.red,
+                    ),
                   ),
                 );
               },
